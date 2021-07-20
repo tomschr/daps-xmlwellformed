@@ -36,8 +36,8 @@ ENTITY_NOT_FOUND = re.compile(
 )
 
 
-if etree.LXML_VERSION < (3, 4, 0):  # pragma: no cover
-    print("ERROR: I need a minimum version of 3.4.0 of lxml.",
+if etree.LXML_VERSION < (4, 2, 1):  # pragma: no cover
+    print("ERROR: I need a minimum version of 4.2.1 of lxml.",
           file=sys.stderr)
     sys.exit(10)
 
@@ -78,8 +78,8 @@ def is_entity_error(msg: str) -> bool:
 #
 
 def exists(context, f) -> bool:
-    """Test whether a path exists.  Returns False for
-       broken symbolic links
+    """Test whether a path exists (SUSE XSLT extension).
+       Returns False for broken symbolic links
 
         :param context:
         :param list f: list of path name (however, we
@@ -95,7 +95,7 @@ def exists(context, f) -> bool:
 
 
 def abspath(context, f) -> str:
-    """Return the absolute path of the context node
+    """Return the absolute path of the context node  (SUSE XSLT extension)
 
         :param context:
         :param list f: list of path name (however, we
@@ -113,7 +113,7 @@ def abspath(context, f) -> str:
 # ------------------------------------------------------------
 #
 
-def process_xinclude(xmlfile, tree) -> list:
+def process_xinclude_xslt(xmlfile, tree) -> list:
     """Process the tree with a XSLT stylesheet which
        resolves any XIncludes. Prints
 
@@ -158,6 +158,25 @@ def process_xinclude(xmlfile, tree) -> list:
 
     yield from []
     # return problems
+
+
+def process_xinclude(xmlfile, tree) -> list:
+    """Resolves any XIncludes.
+
+    :param xmlfile: path to the XML file
+    :param tree: the ElementTree
+    """
+    try:
+        tree.xinclude()
+    except etree.XIncludeError as err:
+        for error in err.error_log:
+            # error is of type lxml.etree._LogEntry and
+            # contains the following attributes:
+            #   column, domain, domain_name, filename, level,
+            #   level_name, line, message, path, type, type_name
+            if error.filename == "<string>":
+                continue
+            yield (error.filename, error.message,  ExitCode.xinclude)
 
 
 def process_transform_output(entries) -> int:
@@ -258,12 +277,6 @@ def check_wellformedness(xmlfile,
 
     except etree.XMLSyntaxError as err:
         print_error_log(xmlfile, err)
-        # for item in ("args", "code", "error_log", "filename", "lineno",
-        #             "msg", "offset", "position",
-        #             "print_file_and_line",
-        #             "text", "with_traceback",
-        #             ):
-        #    print(f"  {item} => {getattr(err, item)}")
         if is_entity_error(err.msg):
             return ExitCode.entities.value
         # elif is_syntax_error(err.msg):

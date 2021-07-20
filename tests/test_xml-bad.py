@@ -84,11 +84,16 @@ def test_file_not_found():
     assert result == dxwf.ExitCode.file_not_found
 
 
-@pytest.mark.parametrize("xmlfile,errormsg", [
-    ("test-xinclude-file-not-found.xml", "File not found"),
-    ("test-xinclude-undeclared-entity.xml", "Cannot resolve URI"),
+@pytest.mark.parametrize("xmlfile,errormsgs", [
+    ("test-xinclude-file-not-found.xml",
+     ("could not load",)
+     ),
+    ("test-xinclude-undeclared-entity.xml",
+     ("Entity 'unknown' not defined",
+      "could not load"),
+     ),
 ])
-def test_xinclude_errors(xmlfile, errormsg, capsys):
+def test_xinclude_errors(xmlfile, errormsgs, capsys):
     # Given
     xmlfile = str(BADDIR / xmlfile)
 
@@ -97,5 +102,6 @@ def test_xinclude_errors(xmlfile, errormsg, capsys):
     captured = capsys.readouterr()
 
     # Then
-    assert errormsg in captured.err
+    for msg in errormsgs:
+        assert msg in captured.err
     assert result == dxwf.ExitCode.xinclude
